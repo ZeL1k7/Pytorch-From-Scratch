@@ -1,6 +1,5 @@
 import numpy as np
 from abc import ABC, abstractmethod
-from activation_functions import relu, leaky_relu, sigmoid, softmax, tanh
 
 
 class Layer(ABC):
@@ -10,16 +9,12 @@ class Layer(ABC):
 
     @abstractmethod
     def forward(self, tensor: np.array) -> np.array:
-        self._tensor = tensor.copy()
-        return tensor
-
-    @abstractmethod
-    def derivative(self, tensor: np.array) -> np.array:
+        self._tensor = np.copy(tensor)
         return tensor
 
     @abstractmethod
     def backward(self, grad_input_tensor: np.array) -> np.array:
-        return grad_input_tensor @ self.derivative(self._tensor)
+        return self._tensor @ grad_input_tensor
 
 
 class Identity(Layer):
@@ -28,91 +23,26 @@ class Identity(Layer):
         self._tensor = None
 
     def forward(self, tensor: np.array) -> np.array:
-        self._tensor = tensor.copy()
+        self._tensor = np.copy(tensor)
         return tensor
 
-    def derivative(self, tensor: np.array) -> np.array:
-        return np.zeros(tensor.shape)
-
     def backward(self, grad_input_tensor: np.array) -> np.array:
-        return grad_input_tensor @ self.derivative(self._tensor)
+        return np.zeros(self._tensor.shape) @ grad_input_tensor
 
 
-class ReLU(Layer):
+class Linear(Layer):
 
-    def __init__(self):
+    def __init__(self, in_channels: int, out_channels: int):
+        self._in_channels = in_channels
+        self._out_channels = out_channels
         self._tensor = None
+        self._weights = np.random.normal(low=-np.sqrt(1/in_channels),
+                                         high=np.sqrt(1/in_channels),
+                                         size=(in_channels, out_channels))
 
     def forward(self, tensor: np.array) -> np.array:
-        self._tensor = tensor.copy()
-        return relu(tensor)
-
-    def derivative(self, tensor: np.array) -> np.array:
-        return np.greater(tensor, 0)
+        self._tensor = tensor
+        return tensor @ self._weights.T
 
     def backward(self, grad_input_tensor: np.array) -> np.array:
-        return grad_input_tensor @ self.derivative(self._tensor)
-
-
-class LeakyReLU(Layer):
-
-    def __init__(self):
-        self._tensor = None
-
-    def forward(self, tensor: np.array) -> np.array:
-        self._tensor = tensor.copy()
-        return leaky_relu(tensor)
-
-    def derivative(self, tensor: np.array) -> np.array:
-        return ...
-
-    def backward(self, tensor: np.array):
-        return ...
-
-
-class Sigmoid(Layer):
-
-    def __init__(self):
-        self._tensor = None
-
-    def forward(self, tensor: np.array) -> np.array:
-        self._tensor = tensor.copy()
-        return sigmoid(tensor)
-
-    def derivative(self, tensor):
-        return sigmoid(tensor) * (1 - sigmoid(tensor))
-
-    def backward(self, grad_input_tensor: np.array) -> np.array:
-        return grad_input_tensor @ self.derivative(self._tensor)
-
-
-class Softmax(Layer):
-
-    def __init__(self):
-        self._tensor = None
-
-    def forward(self, tensor: np.array) -> np.array:
-        self._tensor = tensor.copy()
-        return softmax(tensor)
-
-    def derivative(self, tensor: np.array) -> np.array:
-        ...
-
-    def backward(self, grad_input_tensor: np.array) -> np.array:
-        return grad_input_tensor @ self.derivative(self._tensor)
-
-
-class Tanh(Layer):
-
-    def __init__(self):
-        self._tensor = None
-
-    def forward(self, tensor: np.array) -> np.array:
-        self._tensor = tensor.copy()
-        return tanh(tensor)
-
-    def derivative(self, tensor: np.array) -> np.array:
-        return 1 - (tanh(tensor) * tanh(tensor))
-
-    def backward(self, grad_input_tensor: np.array) -> np.array:
-        return grad_input_tensor @ self.derivative(self._tensor)
+        return self._tensor.T  @ grad_input_tensor
